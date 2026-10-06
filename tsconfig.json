@@ -1,0 +1,3 @@
+{
+  "extends": "@sarvesh-blog/config/tsconfig.base.json"
+}
