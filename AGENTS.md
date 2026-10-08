@@ -29,6 +29,23 @@
 
 - Root `bun run deploy` / `bun run destroy` invoke Alchemy in `packages/infra`. The actual Cloudflare website definition is `packages/infra/alchemy.run.ts`, with `rootDir: "../../apps/web"`, `nodejs_compat`, and the two Convex URLs supplied as env inputs.
 
+## Context7 library IDs
+
+Prefer these official, stack-specific documentation sources when querying Context7:
+
+- Convex: `/websites/convex_dev`
+- Convex Better Auth: `/websites/labs_convex_dev_better-auth`
+- TanStack Start (React): `/websites/tanstack_start_framework_react`
+- TanStack Router: `/tanstack/router`
+- AI SDK: `/websites/ai-sdk_dev`
+- OpenCode: `/anomalyco/opencode`
+- Context.dev: `/websites/context_dev`
+- TanStack AI: `/tanstack/ai`
+- PostHog: `/posthog/posthog.com`
+
+For library-specific questions or implementation details, use the Context7 MCP tools: call `resolve-library-id` to find an ID unless one is listed above, then call `query-docs` with that ID and a focused question. Query separate concepts separately.
+
+
 ## Annotated project tree
 
 Project-owned files and local env files are listed below; installed dependencies and Git internals are collapsed. `routeTree.gen.ts` is created by build/dev and may be absent before the first run.
