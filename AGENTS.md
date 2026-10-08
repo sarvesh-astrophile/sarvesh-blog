@@ -4,7 +4,7 @@
 
 - Use Bun (`bun@1.4.2` in `package.json`) and `bun.lock`. Shared dependency versions live in the root workspace catalog; Vite is overridden to Vite+ core.
 - Initial setup: `bun install`, then `bun run dev:setup` to configure Convex. Installation also generates web env types.
-- `bun run dev` runs the workspace `dev` scripts: Convex and Alchemy. `bun run dev:web` starts bare Vite on port 3001; `bun run dev:server` starts only Convex.
+- `bun run dev` runs the web Vite server and Convex in parallel. `bun run dev:web` starts bare Vite on port 3001; `bun run dev:server` starts only Convex; `bun run dev:infra` starts Alchemy development.
 - `bun run lint` uses Vite+ exclusions for generated/build files. `bun run check` instead runs `oxlint && oxfmt --write`: it modifies files and does **not** typecheck, despite the README's script summary.
 - `bun run check-types` covers web, UI, and infra; the backend has no `check-types` script. Check backend types explicitly with `bunx tsc --noEmit -p packages/backend/convex/tsconfig.json`.
 - For focused checks, run `bun run check-types` from `apps/web`, `packages/ui`, or `packages/infra`. The web script runs `vp build` before `tsc --noEmit`, generating the route tree needed on a fresh checkout.

@@ -86,7 +86,7 @@ Run standalone Node/Bun tools that use Varlock from the owning app directory so 
 
 - Target: web on Cloudflare
 - Configure provider accounts: `cd packages/infra && bunx alchemy profile edit`
-- Dev: bun run dev
+- Dev: bun run dev:infra
 - Deploy: bun run deploy
 - Destroy: bun run destroy
 
@@ -117,9 +117,11 @@ sarvesh-blog/
 
 ## Available Scripts
 
-- `bun run dev`: Start all applications in development mode
+- `bun run dev`: Start the Vite web app and Convex backend in parallel
 - `bun run build`: Build all applications
 - `bun run dev:web`: Start only the web application
+- `bun run dev:server`: Start only the Convex backend
+- `bun run dev:infra`: Start Alchemy development for the Cloudflare deployment
 - `bun run dev:setup`: Setup and configure your Convex project
 - `bun run check-types`: Check TypeScript types across all apps
 - `bun run check`: Run Vite+ format/lint checks and workspace TypeScript checks
