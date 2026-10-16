@@ -20,6 +20,7 @@ import {
   ArrowRight,
   ChevronRight,
   CirclePlus,
+  Moon,
   Play,
   Plus,
   Shuffle,
@@ -30,7 +31,9 @@ import {
   Sun,
   Volume2,
 } from "lucide-react";
-import { type ComponentProps, useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { type ComponentProps, type MouseEvent, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -96,8 +99,53 @@ function PreviewIconButton({
 }
 
 function HomePage() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const themeTransition = useRef(false);
   const [time, setTime] = useState("— IST");
   const [question, setQuestion] = useState("");
+
+  async function toggleTheme(event: MouseEvent<HTMLButtonElement>) {
+    if (themeTransition.current) return;
+
+    const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
+    if (
+      !document.startViewTransition ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setTheme(nextTheme);
+      return;
+    }
+
+    const { left, top, width, height } = event.currentTarget.getBoundingClientRect();
+    const x = left + width / 2;
+    const y = top + height / 2;
+    const radius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y),
+    );
+    const root = document.documentElement;
+    root.style.setProperty("--theme-reveal-x", `${x}px`);
+    root.style.setProperty("--theme-reveal-y", `${y}px`);
+    root.style.setProperty("--theme-reveal-radius", `${radius}px`);
+    root.classList.add("theme-revealing");
+    themeTransition.current = true;
+
+    try {
+      const transition = document.startViewTransition(() => {
+        flushSync(() => setTheme(nextTheme));
+      });
+      await transition.finished;
+    } catch {
+      // A skipped or interrupted transition should still apply the selected theme.
+      setTheme(nextTheme);
+    } finally {
+      root.classList.remove("theme-revealing");
+      root.style.removeProperty("--theme-reveal-x");
+      root.style.removeProperty("--theme-reveal-y");
+      root.style.removeProperty("--theme-reveal-radius");
+      themeTransition.current = false;
+    }
+  }
 
   useEffect(() => {
     const updateTime = () =>
@@ -123,7 +171,22 @@ function HomePage() {
               aria-label="Portfolio navigation"
               className="flex w-full flex-row flex-wrap items-center gap-x-4 gap-y-2 sm:w-[138px] sm:flex-col sm:items-start sm:gap-1"
             >
-              <Sun className="size-5" aria-hidden="true" />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative size-8 shrink-0 rounded-sm"
+                onClick={toggleTheme}
+                aria-label="Toggle light and dark theme"
+              >
+                <Sun
+                  className="size-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
+                  aria-hidden="true"
+                />
+                <Moon
+                  className="absolute size-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
+                  aria-hidden="true"
+                />
+              </Button>
               <Button
                 variant="ghost"
                 className={`${navigationButtonClass} font-medium text-foreground`}
@@ -232,7 +295,7 @@ function HomePage() {
             </nav>
           </aside>
 
-          <main className="min-w-0 px-5 pt-8 pb-12 sm:px-6 sm:py-16 min-[1000px]:px-8">
+          <main className="mx-auto w-full max-w-2xl min-w-0 px-5 pt-8 pb-12 sm:px-6 sm:py-16 min-[1000px]:px-8">
             <div className="mb-5 flex min-h-[39px] items-start justify-between gap-4 text-sm leading-[21px] sm:mb-0">
               <div>
                 Bengaluru, India<time className="block text-xs leading-[18px]">{time}</time>
@@ -368,7 +431,7 @@ function HomePage() {
           className="bg-background px-5 pt-5 pb-2 shadow-sm sm:px-6"
           aria-label="Music player preview"
         >
-          <div className="mx-auto flex max-w-[640px] items-center">
+          <div className="mx-auto flex max-w-2xl items-center">
             <div className="flex items-center gap-2 text-xs leading-[15px]">
               <div className="size-12 shrink-0 bg-[#c96254]" />
               <div>
