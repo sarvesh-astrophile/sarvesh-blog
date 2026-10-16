@@ -14,8 +14,19 @@
 
 - The web app uses TanStack Start file routes in `apps/web/src/routes`. `src/router.tsx` wires Convex into TanStack Query and SSR; `routes/__root.tsx` supplies the auth token and provider. Preserve both server query auth and client provider wiring when changing authentication.
 - Better Auth runs in Convex (`packages/backend/convex/auth.ts`, `http.ts`). The web catch-all `routes/api/auth/$.ts` forwards GET/POST through `src/lib/auth-server.ts`; it is not a separate auth database.
-- Shared UI uses Base UI-backed shadcn (`base-lyra`), not Radix primitives. Import via `@sarvesh-blog/ui/components/<name>`; design tokens/global CSS belong in `packages/ui/src/styles/globals.css`, imported by the web's `src/index.css`.
+- Shared UI uses Base UI-backed shadcn (`base-rhea`, stone base color, Hugeicons registry configuration), not Radix primitives. Import via `@sarvesh-blog/ui/components/<name>`; design tokens/global CSS belong in `packages/ui/src/styles/globals.css`, imported by the web's `src/index.css`. Existing app code also uses Lucide icons.
 - Both `components.json` files route shared primitives to `packages/ui`. The README's shared-component CLI uses `-c packages/ui`; app-specific components belong in `apps/web/src/components`.
+- The shared library now contains 64 components, including navigation, forms, overlays, charts, code highlighting, and messaging. Check existing components before adding dependencies or recreating a primitive. Preserve local customizations when running the shadcn CLI; do not overwrite the whole library by default.
+- Compose Base UI-backed components using their actual local APIs (for example, `Button` uses `render={<Link ... />}`, not Radix's `asChild`). UI dependencies such as Recharts, Embla, React Day Picker, and Shiki belong to `packages/ui`.
+
+## Portfolio homepage and theming
+
+- `apps/web/src/routes/index.tsx` serves the resume-style portfolio at `/`; there is no separate `/resume` route. `/resume/*` URLs refer to static portrait/company-logo assets in `apps/web/public/resume`, not route files.
+- The homepage owns its responsive portfolio navigation, profile/company list, question input and suggestions, and music-player preview. It uses shared `Button` and `InputGroup` components with Tailwind utilities and semantic theme tokens, not a separate page stylesheet. Geist and Merriweather are loaded through route head stylesheet links.
+- Newsletter, AI, music, social, and non-Home navigation actions currently call a toast-only `preview()` helper; they are not backend integrations. Question suggestions only populate local input state. Keep frontend previews distinct from working features unless explicitly wiring an integration.
+- The Bengaluru clock is initialized after mount and refreshed every minute with `Asia/Kolkata`; preserve its SSR-safe placeholder and interval cleanup.
+- `routes/__root.tsx` hides the scaffold `Header` only on `/`, where the portfolio supplies its own navigation. Other routes retain the Home/dashboard header and `ModeToggle`.
+- The root `ThemeProvider` uses `next-themes` with `attribute="class"`, `defaultTheme="system"`, system detection, and transition suppression. Keep `suppressHydrationWarning` on `<html>` and use the shared light/dark CSS tokens rather than hard-coding a global dark class. `components/mode-toggle.tsx` switches based on `resolvedTheme`.
 
 ## Environment and generated files
 
@@ -28,6 +39,10 @@
 ## Deployment
 
 - Root `bun run deploy` / `bun run destroy` invoke Alchemy in `packages/infra`. The actual Cloudflare website definition is `packages/infra/alchemy.run.ts`, with `rootDir: "../../apps/web"`, `nodejs_compat`, and the two Convex URLs supplied as env inputs.
+
+## Design tooling
+
+- Root `opencode.json` enables the Paper MCP server at `http://127.0.0.1:29979/mcp`. This is local design tooling, not an application runtime service or deployed backend.
 
 ## Context7 library IDs
 
@@ -62,6 +77,7 @@ sarvesh-blog/                          # Bun workspace containing the web app, b
 ├── bun.lock                          # Resolved workspace dependency versions and Bun installation metadata.
 ├── bunfig.toml                       # Disables Bun's automatic environment-file loading at the root.
 ├── node_modules/                     # Installed root dependencies, Bun package store, and executable links.
+├── opencode.json                     # Local Paper MCP connection for design tooling.
 ├── package.json                      # Workspace catalog, Vite override, package manager, and root task scripts.
 ├── tsconfig.json                     # Root TypeScript configuration extending the shared config package.
 ├── vite.config.ts                    # Workspace Vite+ lint/format exclusions and staged-file fix command.
@@ -77,6 +93,17 @@ sarvesh-blog/                          # Bun workspace containing the web app, b
 │       ├── tsconfig.json             # Web TypeScript settings, Vite types, and app/shared-UI import aliases.
 │       ├── vite.config.ts            # Port 3001, Tailwind/Start/React plugins, and Better Auth SSR bundling.
 │       ├── public/                   # Static assets served directly by the web application.
+│       │   ├── resume/               # Portfolio portrait and nine company logos, served at /resume/*.
+│       │   │   ├── portrait.png      # Paper-exported profile portrait used by the homepage.
+│       │   │   ├── elcass.png        # Elcass AI company logo.
+│       │   │   ├── entity.png        # Entity SEO company logo.
+│       │   │   ├── guha.png          # Guha Research Conference logo.
+│       │   │   ├── igamingsa.png     # iGamingSA company logo.
+│       │   │   ├── interviewflow.png # InterviewFlow AI company logo.
+│       │   │   ├── johar.png         # Johar Basket company logo.
+│       │   │   ├── odva.png          # Odva company logo.
+│       │   │   ├── rmc.png           # RMC Education company logo.
+│       │   │   └── tranquil.jpg      # Tranquil Decor company logo.
 │       │   └── robots.txt            # Crawler policy allowing all user agents without disallowed paths.
 │       └── src/                      # Web routing, auth integration, environment access, and app components.
 │           ├── env.public.ts         # Typed runtime accessor for Vite's public Convex environment values.
@@ -85,8 +112,9 @@ sarvesh-blog/                          # Bun workspace containing the web app, b
 │           ├── router.tsx            # Creates the router, connects Convex/TanStack Query, and enables SSR queries.
 │           ├── routeTree.gen.ts      # Build/dev-generated route registry; ignored and not always present.
 │           ├── components/           # App-specific navigation, loading, authentication, and account UI.
-│           │   ├── header.tsx        # Home/dashboard navigation rendered by the root document.
+│           │   ├── header.tsx        # Home/dashboard navigation and theme toggle; hidden on /.
 │           │   ├── loader.tsx        # Loading spinner used as the router's pending component.
+│           │   ├── mode-toggle.tsx   # Accessible light/dark toggle using next-themes resolvedTheme.
 │           │   ├── sign-in-form.tsx  # Validated email/password sign-in with toasts and dashboard navigation.
 │           │   ├── sign-up-form.tsx  # Validated name/email/password registration with dashboard navigation.
 │           │   └── user-menu.tsx     # Current-user account dropdown and Better Auth sign-out handling.
@@ -94,8 +122,8 @@ sarvesh-blog/                          # Bun workspace containing the web app, b
 │           │   ├── auth-client.ts    # React Better Auth client configured with the Convex client plugin.
 │           │   └── auth-server.ts    # Auth proxy handler, token lookup, and authenticated server fetch helpers.
 │           └── routes/               # TanStack Start file routes and server endpoint handlers.
-│               ├── __root.tsx        # HTML shell, server auth token, Convex provider, header, and toasts.
-│               ├── index.tsx         # Scaffold home page displaying backend health via TanStack Query.
+│               ├── __root.tsx        # Auth/Convex wiring, theme provider, conditional header, and toasts.
+│               ├── index.tsx         # Portfolio at /: profile, clients, clock, questions, and music preview.
 │               ├── _auth/            # Pathless layout grouping pages behind client auth-state rendering.
 │               │   ├── route.tsx     # Renders protected children, sign-in/sign-up forms, or auth loading state.
 │               │   └── dashboard.tsx # /dashboard page displaying the private query response and account menu.
@@ -113,7 +141,7 @@ sarvesh-blog/                          # Bun workspace containing the web app, b
     │       ├── auth.config.ts        # Convex authentication provider configuration supplied by Better Auth.
     │       ├── auth.ts               # Better Auth instance, Convex database adapter, and current-user query.
     │       ├── convex.config.ts      # Registers the Better Auth component on the Convex application.
-    │       ├── healthCheck.ts        # Public get query returning OK for the home page's connectivity indicator.
+    │       ├── healthCheck.ts        # Scaffold public get query returning OK; no longer used by the homepage.
     │       ├── http.ts               # Convex HTTP router registering the Better Auth component's endpoints.
     │       ├── privateData.ts        # Auth-aware get query returning private or unauthenticated status text.
     │       ├── schema.ts             # Application database schema, currently declaring no app tables.
@@ -134,33 +162,83 @@ sarvesh-blog/                          # Bun workspace containing the web app, b
     │   ├── package.json              # Alchemy/Effect dependencies and dev/deploy/destroy/typecheck scripts.
     │   └── tsconfig.json             # Shared TypeScript defaults scoped to alchemy.run.ts.
     └── ui/                           # Source-exported shared Base UI/shadcn components and design tokens.
-        ├── components.json           # base-lyra shadcn style, shared import aliases, and CSS target.
+        ├── components.json           # base-rhea/stone shadcn configuration, Hugeicons, aliases, and CSS target.
         ├── node_modules/             # Installed UI-workspace dependency links and executables.
         ├── package.json              # UI source/CSS exports, primitive dependencies, and typecheck script.
         ├── postcss.config.mjs        # Exported PostCSS configuration enabling the Tailwind CSS plugin.
         ├── tsconfig.json             # React/DOM TypeScript settings and shared-UI self-import alias.
         └── src/                      # Exported component implementations, hooks, helpers, and styles.
-            ├── components/           # Shared styled primitives, including messaging and attachment UI.
+            ├── components/           # 64 shared UI primitives and compound components; reuse before adding.
+            │   ├── accordion.tsx     # Expandable sections with triggers and panels.
+            │   ├── alert-dialog.tsx  # Modal confirmations with action and cancel slots.
+            │   ├── alert.tsx         # Inline alert title, description, and action slots.
+            │   ├── aspect-ratio.tsx  # Aspect-ratio layout wrapper.
             │   ├── attachment.tsx    # Attachment cards, media, actions, triggers, groups, and upload-state styles.
+            │   ├── avatar.tsx        # Avatar image, fallback, badge, and group slots.
+            │   ├── badge.tsx         # Compact status/category badges with variants.
+            │   ├── breadcrumb.tsx    # Breadcrumb links, separators, and overflow indicators.
             │   ├── bubble.tsx        # Aligned message bubbles with content variants and reaction overlays.
+            │   ├── button-group.tsx  # Grouped buttons with text and separator slots.
             │   ├── button.tsx        # Base UI button wrapper with reusable visual and size variants.
+            │   ├── calendar.tsx      # React Day Picker calendar with styled navigation and day buttons.
             │   ├── card.tsx          # Card container, header, title, description, action, content, and footer slots.
+            │   ├── carousel.tsx      # Embla carousel context, slides, and navigation buttons.
+            │   ├── chart.tsx         # Recharts container, chart configuration, tooltips, and legends.
             │   ├── checkbox.tsx      # Styled Base UI checkbox with a check indicator.
+            │   ├── code-block.tsx    # Code display with highlighting, header, and copy actions.
+            │   ├── collapsible.tsx   # Base UI collapsible root, trigger, and panel exports.
+            │   ├── combobox.tsx      # Searchable selection with input, popup, items, and chips.
+            │   ├── command.tsx       # cmdk command palette, dialog, input, results, and shortcuts.
+            │   ├── context-menu.tsx  # Context menus with items, groups, and submenus.
+            │   ├── dialog.tsx        # Modal dialog trigger, portal, content, and title/description slots.
+            │   ├── direction.tsx     # Base UI direction provider export.
+            │   ├── drawer.tsx        # Base UI drawer with trigger, content, and layout slots.
             │   ├── dropdown-menu.tsx # Base UI menu wrappers, nested menus, checkbox/radio items, and shortcuts.
             │   ├── empty.tsx         # Empty-state layout with media, title, description, and content slots.
+            │   ├── field.tsx         # Accessible field groups, labels, descriptions, and errors.
+            │   ├── hover-card.tsx    # Hover-triggered preview card and positioning.
             │   ├── input-group.tsx   # Compound input/textarea groups with aligned addons, text, and buttons.
+            │   ├── input-otp.tsx     # One-time-password input groups, slots, and separators.
             │   ├── input.tsx         # Styled Base UI input with disabled, focus, and validation states.
+            │   ├── item.tsx          # Item lists with media, content, actions, and separators.
+            │   ├── kbd.tsx           # Keyboard key and key-group presentation.
             │   ├── label.tsx         # Styled native form label with disabled-state styling.
             │   ├── marker.tsx        # Inline markers with optional separator/border variants, icons, and content.
+            │   ├── menubar.tsx       # Menu bar with menus, submenus, and selectable items.
             │   ├── message-scroller.tsx # shadcn message viewport, scroll anchors, navigation buttons, and hooks.
             │   ├── message.tsx       # Aligned message rows/groups with avatar, content, header, and footer slots.
+            │   ├── native-select.tsx # Styled native select, options, and option groups.
+            │   ├── navigation-menu.tsx # Navigation menus, links, triggers, and popups.
+            │   ├── pagination.tsx    # Page links, previous/next controls, and ellipsis.
+            │   ├── popover.tsx       # Anchored popup with trigger, content, and heading slots.
+            │   ├── progress.tsx      # Progress track, indicator, label, and value.
+            │   ├── questionnaire.tsx # Compound question, choice, and answer interface.
+            │   ├── radio-group.tsx   # Styled Base UI radio group and item indicators.
+            │   ├── resizable.tsx     # React Resizable Panels groups, panels, and handles.
+            │   ├── scroll-area.tsx   # Scroll viewport and styled scrollbars.
+            │   ├── select.tsx        # Base UI select trigger, popup, groups, and options.
+            │   ├── separator.tsx     # Horizontal/vertical separator wrapper.
+            │   ├── sheet.tsx         # Edge-positioned dialog panels.
+            │   ├── sidebar.tsx       # Sidebar provider, responsive panels, menus, and toggle controls.
             │   ├── skeleton.tsx      # Pulsing placeholder for loading content.
+            │   ├── slider.tsx        # Slider track, range indicator, and thumbs.
             │   ├── sonner.tsx        # Theme-aware toast host with shared tokens and Lucide status icons.
+            │   ├── spinner.tsx       # Loading spinner icon.
+            │   ├── switch.tsx        # Styled Base UI switch and thumb.
+            │   ├── table.tsx         # Semantic table wrappers, rows, headers, cells, and caption.
+            │   ├── tabs.tsx          # Tab lists, triggers, and panels.
             │   ├── textarea.tsx      # Styled content-sizing native textarea with validation and disabled states.
-            │   └── tooltip.tsx       # Base UI tooltip provider, trigger, portal, popup, positioning, and arrow.
-            ├── hooks/                # Reserved source directory exported through the package's hooks wildcard.
-            │   └── .gitkeep          # Keeps the currently empty hooks directory in Git.
+            │   ├── toast.tsx         # Base UI toast provider, manager, viewport, and actions; separate from Sonner.
+            │   ├── toggle-group.tsx  # Grouped toggle buttons with shared variants.
+            │   ├── toggle.tsx        # Single toggle button with variants.
+            │   ├── tooltip.tsx       # Base UI tooltip provider, trigger, portal, popup, positioning, and arrow.
+            │   └── trace.tsx         # Expandable execution trace steps and status presentation.
+            ├── hooks/                # Shared hooks exported through the package's hooks wildcard.
+            │   ├── .gitkeep          # Retained directory placeholder.
+            │   ├── use-highlighted-code.ts # Client-side incremental syntax highlighting for streamed code.
+            │   └── use-mobile.ts     # Responsive mobile detection used by the shared sidebar.
             ├── lib/                  # Shared utilities imported by the UI primitives.
+            │   ├── highlighter.tsx   # Lazy Shiki core, language aliases, and light/dark React token rendering.
             │   └── utils.ts          # Re-exports the cn dependency's class-name helper.
             └── styles/               # Shared Tailwind entrypoint and application design tokens.
                 └── globals.css       # Tailwind/shadcn imports, source scanning, dark variant, and theme tokens.
