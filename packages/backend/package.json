@@ -6,17 +6,25 @@
   "author": "",
   "scripts": {
     "dev": "convex dev",
-    "dev:setup": "convex dev --configure --until-success"
+    "dev:setup": "convex dev --configure --until-success",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@convex-dev/agent": "catalog:",
+    "@convex-dev/ai-sdk-provider": "catalog:",
     "@convex-dev/better-auth": "catalog:",
+    "@convex-dev/rate-limiter": "catalog:",
+    "ai": "catalog:",
     "better-auth": "catalog:",
     "convex": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@sarvesh-blog/config": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "catalog:"
+    "convex-test": "^0.0.62",
+    "typescript": "catalog:",
+    "vitest": "^5.0.5"
   }
 }

@@ -42,6 +42,67 @@ bun run dev
 Open [http://localhost:3001](http://localhost:3001) in your browser to see the web application.
 Your app will connect to the Convex cloud backend automatically.
 
+The root `dev`, `dev:web`, and `dev:server` scripts disable Node's network-family
+autoselection to avoid Convex connection timeouts on this development network.
+They preserve any existing `NODE_OPTIONS`; no extra startup flag is needed.
+
+## Resume assistant
+
+Submitting the homepage question opens a modal shadcn drawer on the right with a backdrop
+and trapped focus. Escape, an outside press, or the close button dismisses it. There is no
+separate Continue conversation link; submitting another question reopens the drawer.
+The header's **Clear chat** action resets the conversation and input, and queues deletion
+of the old Agent thread, messages, and streams. It is disabled during generation and does
+not reset the visitor's rate limits.
+The drawer uses the shared Message Scroller, Message, Bubble, Input Group, and Trace components.
+Assistant replies use the lazy-loaded shared `Markdown` component (`Streamdown`), with
+streaming-safe formatting and existing shadcn Code Blocks for fenced code. User messages
+remain plain text, and raw HTML is disabled in assistant replies.
+
+### Give the assistant context
+
+Edit **`packages/backend/convex/resumeContext.ts`**. It contains the assistant's only factual
+source, initially populated with facts already on the homepage. Add your verified skills,
+project details, education, contact information, and pricing there. Don't put secrets in it.
+Unknown details are explicitly marked as missing; the prompt instructs the model not to invent
+answers. This is prompt-based grounding, not a guarantee of factual accuracy.
+Context changes take effect on the next reply after syncing/deploying Convex.
+
+### Configure the model
+
+The assistant uses **Convex AI Gateway**, which manages provider credentials and authenticates
+each action with a short-lived deployment token. No OpenAI or Anthropic API key is needed.
+Your Convex team must be on a paid plan with gateway access. Use a Convex Cloud deployment
+or a current local deployment linked to your project; anonymous local and self-hosted
+deployments cannot use the gateway. Team spending limits also apply.
+
+Run `bun run dev:server` to sync the components, schema, and functions. The default model is
+**`anthropic/claude-sonnet-4.5`**. Optionally set **`RESUME_CHAT_MODEL`** in the Convex dashboard
+to another supported gateway model ID, including its provider prefix (for example,
+`openai/gpt-5-mini`). This is a server-only Convex deployment variable, not a `VITE_*` variable.
+Production also needs the Convex backend deployed (run `bunx convex deploy` from
+`packages/backend`); the Alchemy web deployment does not deploy Convex functions.
+See the [gateway setup documentation](https://docs.convex.dev/ai-gateway/setup).
+
+Convex Agent stores messages and stream deltas. `resumeChats` stores only the thread ID,
+hashed anonymous session credential, pending request, and any recoverable error. The browser
+keeps its bearer credential in session storage, so reloads in the same tab resume the chat.
+No sign-in is needed; every message/stream read verifies the credential. A new tab/session
+usually starts a new conversation. Stored histories currently have no automatic expiry.
+
+Server-side transactional limits use `@convex-dev/rate-limiter`: 6 questions/minute per
+session (burst of 3), 30/minute globally (burst of 10), and 300/day globally. Anonymous
+sessions can be recreated, so the global limits protect the model budget as well.
+Questions are capped at 2,000 characters and replies at 700 output tokens.
+Generation runs in a scheduled internal action with a timeout and no automatic paid-call retries;
+a separate Workflow component isn't needed for this single-response flow.
+
+Run backend tests with `bun run --cwd packages/backend test`. Tests use convex-test and
+mock generation; they don't call the AI Gateway or a model provider.
+
+The AI SDK is pinned to the version used by the gateway provider to avoid incompatible
+provider types. Check compatibility when upgrading the Agent or gateway provider.
+
 ## UI Customization
 
 React web apps in this stack share shadcn/ui primitives through `packages/ui`.

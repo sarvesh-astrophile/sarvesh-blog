@@ -4,6 +4,7 @@
 @import "@fontsource-variable/inter";
 @source "../../../apps/**/*.{ts,tsx}";
 @source "../**/*.{ts,tsx}";
+@source "../../node_modules/streamdown/dist/*.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -124,6 +125,7 @@
     @apply border-border outline-ring/50;
   }
   body {
+    position: relative;
     @apply font-sans bg-background text-foreground;
   }
   html {

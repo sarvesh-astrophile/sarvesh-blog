@@ -35,6 +35,7 @@ import { useTheme } from "next-themes";
 import { type ComponentProps, type MouseEvent, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { toast } from "sonner";
+import { ResumeChatDrawer, useResumeChat } from "@/components/resume-chat";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -72,10 +73,10 @@ const companies = [
 ];
 
 const suggestions = [
-  "How many product he has build ?",
-  "What is the tech stack he mainly uses",
-  "What is the average charge for any project ?",
-  "How many product he has build ?",
+  "What products has he built?",
+  "What tech stack does he mainly use?",
+  "What does he charge for a project?",
+  "Which companies has he worked with?",
 ];
 
 function preview(feature: string) {
@@ -102,7 +103,8 @@ function HomePage() {
   const { resolvedTheme, setTheme } = useTheme();
   const themeTransition = useRef(false);
   const [time, setTime] = useState("— IST");
-  const [question, setQuestion] = useState("");
+  const chat = useResumeChat();
+  const { question, setQuestion } = chat;
 
   async function toggleTheme(event: MouseEvent<HTMLButtonElement>) {
     if (themeTransition.current) return;
@@ -380,7 +382,7 @@ function HomePage() {
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
-                  preview("AI questions");
+                  void chat.submit();
                 }}
               >
                 <Field>
@@ -396,12 +398,14 @@ function HomePage() {
                       id="portfolio-question"
                       placeholder="Ask anything about him ..."
                       value={question}
+                      maxLength={2000}
                       onChange={(event) => setQuestion(event.target.value)}
                     />
                     <InputGroupAddon align="inline-end" className="p-0">
                       <InputGroupButton
                         variant="default"
                         type="submit"
+                        disabled={!chat.ready || chat.busy || !question.trim()}
                         className="h-auto gap-2 rounded-full px-2.5 py-1 text-sm leading-[21px] font-normal"
                       >
                         Ask AI <Sparkles size={16} aria-hidden="true" />
@@ -497,6 +501,7 @@ function HomePage() {
             </div>
           </div>
         </footer>
+        <ResumeChatDrawer chat={chat} />
       </div>
     </TooltipProvider>
   );

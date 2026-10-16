@@ -11,6 +11,7 @@
     "env:generate": "varlock codegen"
   },
   "dependencies": {
+    "@convex-dev/agent": "catalog:",
     "@convex-dev/better-auth": "catalog:",
     "@convex-dev/react-query": "^0.1.0",
     "@sarvesh-blog/backend": "workspace:*",

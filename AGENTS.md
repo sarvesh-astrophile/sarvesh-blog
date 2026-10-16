@@ -8,7 +8,7 @@
 - `bun run lint` uses Vite+ exclusions for generated/build files. `bun run check` instead runs `oxlint && oxfmt --write`: it modifies files and does **not** typecheck, despite the README's script summary.
 - `bun run check-types` covers web, UI, and infra; the backend has no `check-types` script. Check backend types explicitly with `bunx tsc --noEmit -p packages/backend/convex/tsconfig.json`.
 - For focused checks, run `bun run check-types` from `apps/web`, `packages/ui`, or `packages/infra`. The web script runs `vp build` before `tsc --noEmit`, generating the route tree needed on a fresh checkout.
-- No test scripts, test configuration, or test files currently exist; Testing Library dependencies alone do not establish a test workflow.
+- Backend tests use convex-test/Vitest with edge-runtime: `bun run --cwd packages/backend test`. Tests live in `packages/backend/convex/*.test.ts`; there is no frontend test workflow yet.
 
 ## Wiring and ownership
 
@@ -23,7 +23,7 @@
 
 - `apps/web/src/routes/index.tsx` serves the resume-style portfolio at `/`; there is no separate `/resume` route. `/resume/*` URLs refer to static portrait/company-logo assets in `apps/web/public/resume`, not route files.
 - The homepage owns its responsive portfolio navigation, profile/company list, question input and suggestions, and music-player preview. It uses shared `Button` and `InputGroup` components with Tailwind utilities and semantic theme tokens, not a separate page stylesheet. Geist and Merriweather are loaded through route head stylesheet links.
-- Newsletter, AI, music, social, and non-Home navigation actions currently call a toast-only `preview()` helper; they are not backend integrations. Question suggestions only populate local input state. Keep frontend previews distinct from working features unless explicitly wiring an integration.
+- Newsletter, music, social, and non-Home navigation actions use the toast-only `preview()` helper. The AI form is connected: `components/resume-chat.tsx` opens a right-side modal drawer (no Continue conversation link), with Convex Agent history/streaming and server rate limits in `convex/resumeChat.ts`. Suggestions populate the question field. Assistant replies render through the shared streaming Markdown component. Resume facts live in server-only `convex/resumeContext.ts`; keep missing details explicit. Generation uses Convex AI Gateway (paid team required), defaulting to `anthropic/claude-sonnet-4.5`; optional `RESUME_CHAT_MODEL` is a typed Convex deployment env variable with a provider-prefixed gateway model ID. No provider API key or web env value is needed.
 - The Bengaluru clock is initialized after mount and refreshed every minute with `Asia/Kolkata`; preserve its SSR-safe placeholder and interval cleanup.
 - `routes/__root.tsx` hides the scaffold `Header` only on `/`, where the portfolio supplies its own navigation. Other routes retain the Home/dashboard header and `ModeToggle`.
 - The root `ThemeProvider` uses `next-themes` with `attribute="class"`, `defaultTheme="system"`, system detection, and transition suppression. Keep `suppressHydrationWarning` on `<html>` and use the shared light/dark CSS tokens rather than hard-coding a global dark class. `components/mode-toggle.tsx` switches based on `resolvedTheme`.
@@ -59,7 +59,6 @@ Prefer these official, stack-specific documentation sources when querying Contex
 - PostHog: `/posthog/posthog.com`
 
 For library-specific questions or implementation details, use the Context7 MCP tools: call `resolve-library-id` to find an ID unless one is listed above, then call `query-docs` with that ID and a focused question. Query separate concepts separately.
-
 
 ## Annotated project tree
 
@@ -243,6 +242,7 @@ sarvesh-blog/                          # Bun workspace containing the web app, b
             └── styles/               # Shared Tailwind entrypoint and application design tokens.
                 └── globals.css       # Tailwind/shadcn imports, source scanning, dark variant, and theme tokens.
 ```
+
 # Convex guidelines
 
 These guidelines target Convex `^1.44.0`.
@@ -313,17 +313,17 @@ export default defineSchema({
 ```
 
 - Here are the valid Convex types along with their respective validators:
-  | Convex Type | TS/JS type | Example Usage | Validator for argument validation and schemas | Notes |
+  | Convex Type | TS/JS type  | Example Usage        | Validator for argument validation and schemas | Notes                                                                                                                                                                                                  |
   | ----------- | ----------- | -------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-  | Id | string | `doc._id` | `v.id(tableName)` | |
-  | Null | null | `null` | `v.null()` | JavaScript's `undefined` is not a valid Convex value. Functions the return `undefined` or do not return will return `null` when called from a client. Use `null` instead. |
-  | Int64 | bigint | `3n` | `v.int64()` | Int64s only support BigInts between -2^63 and 2^63-1. Convex supports `bigint`s in most modern browsers. |
-  | Float64 | number | `3.1` | `v.number()` | Convex supports all IEEE-754 double-precision floating point numbers (such as NaNs). Inf and NaN are JSON serialized as strings. |
-  | Boolean | boolean | `true` | `v.boolean()` |
-  | String | string | `"abc"` | `v.string()` | Strings are stored as UTF-8 and must be valid Unicode sequences. Strings must be smaller than the 1MB total size limit when encoded as UTF-8. |
-  | Bytes | ArrayBuffer | `new ArrayBuffer(8)` | `v.bytes()` | Convex supports first class bytestrings, passed in as `ArrayBuffer`s. Bytestrings must be smaller than the 1MB total size limit for Convex types. |
-  | Array | Array | `[1, 3.2, "abc"]` | `v.array(values)` | Arrays can have at most 8192 values. |
-  | Object | Object | `{a: "abc"}` | `v.object({property: value})` | Convex only supports "plain old JavaScript objects" (objects that do not have a custom prototype). Objects can have at most 1024 entries. Field names must be nonempty and not start with "$" or "\_". |
+  | Id          | string      | `doc._id`            | `v.id(tableName)`                             |                                                                                                                                                                                                        |
+  | Null        | null        | `null`               | `v.null()`                                    | JavaScript's `undefined` is not a valid Convex value. Functions the return `undefined` or do not return will return `null` when called from a client. Use `null` instead.                              |
+  | Int64       | bigint      | `3n`                 | `v.int64()`                                   | Int64s only support BigInts between -2^63 and 2^63-1. Convex supports `bigint`s in most modern browsers.                                                                                               |
+  | Float64     | number      | `3.1`                | `v.number()`                                  | Convex supports all IEEE-754 double-precision floating point numbers (such as NaNs). Inf and NaN are JSON serialized as strings.                                                                       |
+  | Boolean     | boolean     | `true`               | `v.boolean()`                                 |
+  | String      | string      | `"abc"`              | `v.string()`                                  | Strings are stored as UTF-8 and must be valid Unicode sequences. Strings must be smaller than the 1MB total size limit when encoded as UTF-8.                                                          |
+  | Bytes       | ArrayBuffer | `new ArrayBuffer(8)` | `v.bytes()`                                   | Convex supports first class bytestrings, passed in as `ArrayBuffer`s. Bytestrings must be smaller than the 1MB total size limit for Convex types.                                                      |
+  | Array       | Array       | `[1, 3.2, "abc"]`    | `v.array(values)`                             | Arrays can have at most 8192 values.                                                                                                                                                                   |
+  | Object      | Object      | `{a: "abc"}`         | `v.object({property: value})`                 | Convex only supports "plain old JavaScript objects" (objects that do not have a custom prototype). Objects can have at most 1024 entries. Field names must be nonempty and not start with "$" or "\_". |
 
 | Record | Record | `{"a": "1", "b": "2"}` | `v.record(keys, values)` | Records are objects at runtime, but can have dynamic keys. Keys must be only ASCII characters, nonempty, and not start with "$" or "\_". |
 
